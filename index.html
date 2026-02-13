@@ -1238,6 +1238,10 @@
                     updateEmojiList();
                 });
 
+                // Voice/Video events
+                socket.on('user_joined_voice', handleUserJoinedVoice);
+                socket.on('user_left_voice', handleUserLeftVoice);
+
                 // WebRTC signaling events
                 socket.on('webrtc_offer', handleWebRTCOffer);
                 socket.on('webrtc_answer', handleWebRTCAnswer);
@@ -1247,18 +1251,111 @@
             }
         }
 
+        // WebRTC configuration
+        const rtcConfiguration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // Active voice/video users in current channel
+        let activeVoiceUsers = {};
+
         // WebRTC handlers
         async function handleWebRTCOffer(data) {
-            // Implement WebRTC offer handling
-            console.log('Received WebRTC offer from:', data.from_user);
+            try {
+                console.log('Received WebRTC offer from:', data.from_user);
+                
+                const peerConnection = new RTCPeerConnection(rtcConfiguration);
+                peerConnections[data.from_user] = peerConnection;
+
+                // Add local stream tracks to peer connection
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        peerConnection.addTrack(track, localStream);
+                    });
+                }
+
+                // Handle incoming remote stream
+                peerConnection.ontrack = (event) => {
+                    console.log('Received remote track from:', data.from_user);
+                    const remoteStream = event.streams[0];
+                    playRemoteAudio(data.from_user, remoteStream);
+                };
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice_candidate', {
+                            target: data.from_user,
+                            candidate: event.candidate,
+                            from_user: currentUser.email
+                        });
+                    }
+                };
+
+                // Set remote description
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+                // Create answer
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                // Send answer back
+                socket.emit('webrtc_answer', {
+                    target: data.from_user,
+                    answer: answer,
+                    from_user: currentUser.email
+                });
+
+            } catch (error) {
+                console.error('Error handling WebRTC offer:', error);
+            }
         }
 
         async function handleWebRTCAnswer(data) {
-            console.log('Received WebRTC answer from:', data.from_user);
+            try {
+                console.log('Received WebRTC answer from:', data.from_user);
+                
+                const peerConnection = peerConnections[data.from_user];
+                if (peerConnection) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            } catch (error) {
+                console.error('Error handling WebRTC answer:', error);
+            }
         }
 
         async function handleICECandidate(data) {
-            console.log('Received ICE candidate from:', data.from_user);
+            try {
+                console.log('Received ICE candidate from:', data.from_user);
+                
+                const peerConnection = peerConnections[data.from_user];
+                if (peerConnection) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            } catch (error) {
+                console.error('Error handling ICE candidate:', error);
+            }
+        }
+
+        function playRemoteAudio(userId, stream) {
+            // Remove existing audio element if any
+            let audioElement = document.getElementById(`audio-${userId}`);
+            if (audioElement) {
+                audioElement.remove();
+            }
+
+            // Create new audio element for remote stream
+            audioElement = document.createElement('audio');
+            audioElement.id = `audio-${userId}`;
+            audioElement.srcObject = stream;
+            audioElement.autoplay = true;
+            audioElement.style.display = 'none';
+            document.body.appendChild(audioElement);
+
+            console.log('Playing remote audio from:', userId);
         }
 
         // Authentication functions
@@ -1808,7 +1905,29 @@
         }
 
         function startDM(friend) {
-            alert(`Starting DM with ${friend.username} - Coming soon!`);
+            // Create a DM "server" for this friend
+            const dmId = `dm_${[currentUser.email, friend.email].sort().join('_')}`;
+            
+            // Switch to DM view
+            currentServer = dmId;
+            currentChannel = 'dm';
+            
+            // Update UI
+            document.getElementById('server-name').textContent = `💬 ${friend.username}`;
+            document.getElementById('channel-name').textContent = 'Direct Message';
+            
+            // Load DM messages
+            loadMessages(dmId, 'dm');
+            
+            // Close friends panel
+            closeFriendsPanel();
+            
+            console.log('Started DM with:', friend.username);
+        }
+
+        function closeFriendsPanel() {
+            // This would close the friends panel if you have one
+            // For now, just a placeholder
         }
 
         // Profile functions
@@ -2078,7 +2197,7 @@
                 document.querySelector('.voice-btn').style.display = 'none';
                 document.querySelector('.voice-btn.leave').style.display = 'block';
                 
-                // Notify others
+                // Notify others and request existing voice users
                 if (socket && socket.connected) {
                     socket.emit('voice_join', {
                         server_id: currentServer,
@@ -2088,7 +2207,7 @@
                     });
                 }
                 
-                alert('✅ Voice chat activated!\n🎤 Microphone connected successfully.');
+                alert('✅ Voice chat activated!\n🎤 Microphone connected. You can now talk with others in the channel.');
             } catch (error) {
                 console.error('Error joining voice:', error);
                 
@@ -2105,6 +2224,87 @@
                     errorMessage += 'Please connect a microphone and try again.';
                 } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
                     errorMessage += '⚠️ Microphone is being used by another app.\n\n';
+                    errorMessage += 'Please close other apps using the microphone.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += '⚙️ Microphone settings incompatible.\n\n';
+                    errorMessage += 'Please check your microphone settings.';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage += '🌐 Voice chat requires HTTPS.\n\n';
+                    errorMessage += 'Railway provides HTTPS automatically - use the https:// URL.';
+                } else {
+                    errorMessage += 'Error: ' + error.message;
+                }
+                
+                alert(errorMessage);
+            }
+        }
+
+        // Handle when another user joins voice
+        async function handleUserJoinedVoice(data) {
+            console.log('User joined voice:', data.user_email);
+            
+            if (data.user_email === currentUser.email || !localStream) {
+                return; // Don't connect to ourselves or if we're not in voice
+            }
+
+            try {
+                // Create peer connection for this user
+                const peerConnection = new RTCPeerConnection(rtcConfiguration);
+                peerConnections[data.user_email] = peerConnection;
+
+                // Add local stream tracks
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Handle remote stream
+                peerConnection.ontrack = (event) => {
+                    console.log('Received remote track from:', data.user_email);
+                    playRemoteAudio(data.user_email, event.streams[0]);
+                };
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice_candidate', {
+                            target: data.user_email,
+                            candidate: event.candidate,
+                            from_user: currentUser.email
+                        });
+                    }
+                };
+
+                // Create and send offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                socket.emit('webrtc_offer', {
+                    target: data.user_email,
+                    offer: offer,
+                    from_user: currentUser.email
+                });
+
+            } catch (error) {
+                console.error('Error creating peer connection:', error);
+            }
+        }
+
+        // Handle when user leaves voice
+        function handleUserLeftVoice(data) {
+            console.log('User left voice:', data.user_email);
+            
+            // Close and remove peer connection
+            if (peerConnections[data.user_email]) {
+                peerConnections[data.user_email].close();
+                delete peerConnections[data.user_email];
+            }
+
+            // Remove audio element
+            const audioElement = document.getElementById(`audio-${data.user_email}`);
+            if (audioElement) {
+                audioElement.remove();
+            }
+        }
                     errorMessage += 'Please close other apps using the microphone.';
                 } else if (error.name === 'OverconstrainedError') {
                     errorMessage += '⚙️ Microphone settings incompatible.\n\n';
@@ -2163,8 +2363,30 @@
                 screenStream.getVideoTracks()[0].onended = () => {
                     stopScreenShare();
                 };
+
+                // Broadcast screen share to others in voice channel
+                if (socket && socket.connected) {
+                    socket.emit('screen_share_start', {
+                        server_id: currentServer,
+                        channel_id: currentChannel,
+                        user_email: currentUser.email,
+                        username: currentUser.username
+                    });
+
+                    // Share screen stream with connected peers
+                    Object.values(peerConnections).forEach(pc => {
+                        screenStream.getVideoTracks().forEach(track => {
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                sender.replaceTrack(track);
+                            } else {
+                                pc.addTrack(track, screenStream);
+                            }
+                        });
+                    });
+                }
                 
-                alert('✅ Screen sharing activated!');
+                alert('✅ Screen sharing activated!\n📺 Your screen is now visible to others in the voice channel.');
                 
             } catch (error) {
                 console.error('Screen share error:', error);
@@ -2185,6 +2407,15 @@
             document.getElementById('screen-share-container').style.display = 'none';
             document.getElementById('screen-share-btn').style.display = 'block';
             document.getElementById('stop-share-btn').style.display = 'none';
+
+            // Notify others
+            if (socket && socket.connected) {
+                socket.emit('screen_share_stop', {
+                    server_id: currentServer,
+                    channel_id: currentChannel,
+                    user_email: currentUser.email
+                });
+            }
         }
 
         // Camera functions
