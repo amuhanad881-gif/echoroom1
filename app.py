@@ -851,6 +851,40 @@ def handle_typing(data):
     except Exception as e:
         print(f"Typing error: {str(e)}")
 
+# Voice/Video events
+@socketio.on('voice_join')
+def handle_voice_join(data):
+    try:
+        room = f"{data.get('server_id')}_{data.get('channel_id')}"
+        join_room(room)
+        user_email = data.get('user_email')
+        username = data.get('username')
+        
+        # Notify others in the room
+        emit('user_joined_voice', {
+            "user_email": user_email,
+            "username": username
+        }, room=room, include_self=False)
+        
+        print(f"{username} joined voice in {room}")
+    except Exception as e:
+        print(f"Voice join error: {str(e)}")
+
+@socketio.on('voice_leave')
+def handle_voice_leave(data):
+    try:
+        room = f"{data.get('server_id')}_{data.get('channel_id')}"
+        user_email = data.get('user_email')
+        
+        # Notify others in the room
+        emit('user_left_voice', {
+            "user_email": user_email
+        }, room=room, include_self=False)
+        
+        print(f"{user_email} left voice from {room}")
+    except Exception as e:
+        print(f"Voice leave error: {str(e)}")
+
 # WebRTC signaling for voice/video/screen share
 @socketio.on('webrtc_offer')
 def handle_webrtc_offer(data):
