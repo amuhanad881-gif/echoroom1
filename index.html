@@ -2305,20 +2305,6 @@
                 audioElement.remove();
             }
         }
-                    errorMessage += 'Please close other apps using the microphone.';
-                } else if (error.name === 'OverconstrainedError') {
-                    errorMessage += '⚙️ Microphone settings incompatible.\n\n';
-                    errorMessage += 'Please check your microphone settings.';
-                } else if (error.name === 'NotSupportedError') {
-                    errorMessage += '🌐 Voice chat requires HTTPS.\n\n';
-                    errorMessage += 'Railway provides HTTPS automatically - use the https:// URL.';
-                } else {
-                    errorMessage += 'Error: ' + error.message;
-                }
-                
-                alert(errorMessage);
-            }
-        }
 
         function leaveVoiceChannel() {
             if (localStream) {
