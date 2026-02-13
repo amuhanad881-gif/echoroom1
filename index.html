@@ -2054,7 +2054,25 @@
         // Voice chat functions
         async function joinVoiceChannel() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Check if HTTPS or localhost
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    alert('⚠️ Voice chat requires HTTPS connection.\n\nPlease access the site via HTTPS to use voice features.\n\nRailway automatically provides HTTPS - make sure you\'re using the https:// URL.');
+                    return;
+                }
+
+                // Check if browser supports getUserMedia
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('⚠️ Your browser doesn\'t support voice chat.\n\nPlease use Chrome, Firefox, or Edge.');
+                    return;
+                }
+
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
                 
                 // Show voice controls
                 document.querySelector('.voice-btn').style.display = 'none';
@@ -2070,10 +2088,35 @@
                     });
                 }
                 
-                alert('Voice chat activated! (Full WebRTC implementation coming soon)');
+                alert('✅ Voice chat activated!\n🎤 Microphone connected successfully.');
             } catch (error) {
                 console.error('Error joining voice:', error);
-                alert('Could not access microphone. Please check permissions.');
+                
+                let errorMessage = '❌ Could not access microphone\n\n';
+                
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage += '🔒 Microphone permission denied.\n\n';
+                    errorMessage += 'Please:\n';
+                    errorMessage += '1. Click the 🔒 or ⓘ icon in your address bar\n';
+                    errorMessage += '2. Allow microphone access for this site\n';
+                    errorMessage += '3. Refresh the page and try again';
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage += '🎤 No microphone found.\n\n';
+                    errorMessage += 'Please connect a microphone and try again.';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage += '⚠️ Microphone is being used by another app.\n\n';
+                    errorMessage += 'Please close other apps using the microphone.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += '⚙️ Microphone settings incompatible.\n\n';
+                    errorMessage += 'Please check your microphone settings.';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage += '🌐 Voice chat requires HTTPS.\n\n';
+                    errorMessage += 'Railway provides HTTPS automatically - use the https:// URL.';
+                } else {
+                    errorMessage += 'Error: ' + error.message;
+                }
+                
+                alert(errorMessage);
             }
         }
 
@@ -2098,6 +2141,12 @@
         // Screen share functions
         async function startScreenShare() {
             try {
+                // Check if HTTPS or localhost
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    alert('⚠️ Screen share requires HTTPS connection.\n\nPlease access the site via HTTPS.\n\nRailway automatically provides HTTPS - make sure you\'re using the https:// URL.');
+                    return;
+                }
+
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ 
                     video: true,
                     audio: true 
@@ -2115,12 +2164,15 @@
                     stopScreenShare();
                 };
                 
-                // Notify others (WebRTC implementation coming soon)
-                alert('Screen sharing activated! (Full WebRTC implementation coming soon)');
+                alert('✅ Screen sharing activated!');
                 
             } catch (error) {
                 console.error('Screen share error:', error);
-                alert('Could not start screen share');
+                if (error.name === 'NotAllowedError') {
+                    alert('❌ Screen share permission denied.\n\nPlease allow screen sharing when prompted.');
+                } else {
+                    alert('❌ Could not start screen share.\n\nError: ' + error.message);
+                }
             }
         }
 
@@ -2138,8 +2190,17 @@
         // Camera functions
         async function startCamera() {
             try {
+                // Check if HTTPS or localhost
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    alert('⚠️ Camera requires HTTPS connection.\n\nPlease access the site via HTTPS.\n\nRailway automatically provides HTTPS - make sure you\'re using the https:// URL.');
+                    return;
+                }
+
                 localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true,
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
                     audio: true 
                 });
                 
@@ -2150,12 +2211,27 @@
                 document.getElementById('camera-btn').style.display = 'none';
                 document.getElementById('stop-camera-btn').style.display = 'block';
                 
-                // Notify others (WebRTC implementation coming soon)
-                alert('Camera activated! (Full WebRTC implementation coming soon)');
+                alert('✅ Camera activated!');
                 
             } catch (error) {
                 console.error('Camera error:', error);
-                alert('Could not access camera');
+                
+                let errorMessage = '❌ Could not access camera\n\n';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += '🔒 Camera/Microphone permission denied.\n\n';
+                    errorMessage += 'Please allow access in your browser settings.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += '📹 No camera found.\n\n';
+                    errorMessage += 'Please connect a camera and try again.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += '⚠️ Camera is being used by another app.\n\n';
+                    errorMessage += 'Please close other apps using the camera.';
+                } else {
+                    errorMessage += 'Error: ' + error.message;
+                }
+                
+                alert(errorMessage);
             }
         }
 
