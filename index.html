@@ -1,497 +1,613 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echo Room - Simple Chat</title>
+    <title>Echo Room</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #36393f;
+            color: #dcddde;
+            overflow: hidden;
+        }
+        
+        /* Auth */
+        .auth-screen {
+            width: 100vw;
             height: 100vh;
+            background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
-        /* Auth Screen */
-        .auth-container {
-            background: white;
+        .auth-box {
+            background: #36393f;
             padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            width: 480px;
         }
-
-        .auth-container h1 {
-            color: #667eea;
-            margin-bottom: 30px;
+        .auth-box h1 {
+            color: #fff;
+            font-size: 28px;
             text-align: center;
+            margin-bottom: 30px;
         }
-
-        .form-group {
+        .form-field {
             margin-bottom: 20px;
         }
-
-        .form-group label {
+        .form-field label {
             display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
+            color: #b9bbbe;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
         }
-
-        .form-group input {
+        .form-field input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
+            background: #202225;
+            border: 1px solid #202225;
+            color: #dcddde;
+            padding: 10px;
+            border-radius: 3px;
             font-size: 16px;
-            font-weight: 600;
+        }
+        .form-field input:focus {
+            outline: none;
+            border-color: #5865f2;
+        }
+        .auth-btn {
+            width: 100%;
+            background: #5865f2;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 3px;
+            font-size: 16px;
             cursor: pointer;
             margin-bottom: 10px;
         }
-
-        .btn:hover {
-            background: #5568d3;
+        .auth-btn:hover { background: #4752c4; }
+        .auth-btn.secondary {
+            background: transparent;
+            color: #5865f2;
         }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .error {
-            color: #e74c3c;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-        }
-
-        .success {
-            color: #27ae60;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-        }
-
+        .error { color: #f04747; font-size: 14px; margin-top: 10px; }
+        
         /* Main App */
         .main-app {
             display: none;
             width: 100vw;
             height: 100vh;
-            background: #36393f;
         }
-
         .app-container {
             display: flex;
             height: 100%;
         }
-
-        /* Sidebar */
-        .sidebar {
+        
+        /* Servers Bar */
+        .servers-bar {
+            width: 72px;
+            background: #202225;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+        }
+        .server-icon {
+            width: 48px;
+            height: 48px;
+            background: #36393f;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .server-icon:hover {
+            border-radius: 16px;
+            background: #5865f2;
+        }
+        .server-icon.active {
+            border-radius: 16px;
+            background: #5865f2;
+        }
+        
+        /* Channels */
+        .channels-sidebar {
             width: 240px;
             background: #2f3136;
             display: flex;
             flex-direction: column;
         }
-
-        .sidebar-header {
-            padding: 20px;
-            background: #27282c;
-            color: white;
-            font-weight: 600;
+        .server-header {
+            height: 48px;
+            padding: 0 16px;
             border-bottom: 1px solid #202225;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #fff;
         }
-
-        .channel-list {
+        .channels-list {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 8px;
         }
-
         .channel-item {
-            padding: 10px 15px;
+            padding: 8px;
+            margin: 2px 0;
+            border-radius: 4px;
             color: #96989d;
             cursor: pointer;
-            border-radius: 5px;
-            margin-bottom: 5px;
             display: flex;
             align-items: center;
         }
-
         .channel-item:hover {
-            background: #393c43;
+            background: #3c3f45;
             color: #dcddde;
         }
-
         .channel-item.active {
-            background: #5865f2;
-            color: white;
+            background: #404249;
+            color: #fff;
         }
-
         .channel-item::before {
             content: '#';
-            margin-right: 8px;
-            font-weight: bold;
+            margin-right: 6px;
+            font-weight: 600;
         }
-
-        .voice-channel::before {
+        .channel-item.voice::before {
             content: '🔊';
         }
-
-        /* Chat Area */
-        .chat-container {
+        
+        /* User Panel */
+        .user-panel {
+            height: 52px;
+            background: #292b2f;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #5865f2;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+        }
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .logout-btn {
+            background: #ed4245;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* Chat */
+        .chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
-
         .chat-header {
-            padding: 15px 20px;
-            background: #36393f;
+            height: 48px;
             border-bottom: 1px solid #202225;
-            color: white;
-            font-weight: 600;
+            padding: 0 16px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
         }
-
-        .voice-controls {
+        .channel-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .voice-btns {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
-
         .voice-btn {
-            padding: 8px 16px;
             background: #3ba55d;
-            color: white;
+            color: #fff;
             border: none;
-            border-radius: 5px;
+            padding: 8px 16px;
+            border-radius: 3px;
             cursor: pointer;
             font-size: 14px;
         }
-
-        .voice-btn:hover {
-            background: #2d7d46;
-        }
-
-        .voice-btn.leave {
-            background: #ed4245;
-            display: none;
-        }
-
-        .voice-btn.leave:hover {
-            background: #c03537;
-        }
-
+        .voice-btn:hover { background: #2d7d46; }
+        .voice-btn.disconnect { background: #ed4245; }
+        .voice-btn.disconnect:hover { background: #c03537; }
+        
+        /* Messages */
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
-            background: #36393f;
+            padding: 16px;
         }
-
         .message {
+            display: flex;
             margin-bottom: 20px;
-            padding: 5px;
         }
-
-        .message-header {
+        .message:hover { background: #32353b; padding: 2px 16px; margin: 0 -16px 20px -16px; }
+        .msg-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #5865f2;
+            margin-right: 16px;
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .message-author {
+            justify-content: center;
+            color: #fff;
             font-weight: 600;
-            color: #ffffff;
-            margin-right: 10px;
         }
-
-        .message-time {
+        .msg-content {
+            flex: 1;
+        }
+        .msg-header {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+        .msg-author {
+            font-weight: 600;
+            color: #fff;
+            margin-right: 8px;
+        }
+        .msg-time {
             font-size: 12px;
             color: #72767d;
         }
-
-        .message-content {
+        .msg-text {
             color: #dcddde;
-            line-height: 1.5;
+            line-height: 1.4;
         }
-
-        /* Message Input */
-        .message-input-container {
-            padding: 20px;
-            background: #36393f;
-        }
-
-        .message-input {
-            width: 100%;
-            padding: 12px;
-            background: #40444b;
-            border: none;
+        
+        /* Voice Message */
+        .voice-msg {
+            background: #2f3136;
             border-radius: 8px;
-            color: #dcddde;
+            padding: 12px;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 350px;
+        }
+        .voice-play {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #5865f2;
+            border: none;
+            color: #fff;
+            cursor: pointer;
             font-size: 14px;
         }
-
-        .message-input:focus {
-            outline: none;
+        .voice-wave {
+            flex: 1;
+            height: 24px;
+            background: #1e1f22;
+            border-radius: 4px;
         }
-
-        /* User Panel */
-        .user-panel {
-            padding: 15px;
-            background: #27282c;
-            border-top: 1px solid #202225;
-            color: white;
+        .voice-time {
+            font-size: 12px;
+            color: #b9bbbe;
+        }
+        
+        /* Input */
+        .input-area {
+            padding: 16px;
+        }
+        .input-wrapper {
+            background: #40444b;
+            border-radius: 8px;
+            padding: 0 16px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
         }
-
-        .logout-btn {
-            padding: 8px 16px;
-            background: #ed4245;
-            color: white;
+        .msg-input {
+            flex: 1;
+            background: transparent;
             border: none;
-            border-radius: 5px;
+            color: #dcddde;
+            padding: 12px 8px;
+            font-size: 15px;
+        }
+        .msg-input:focus { outline: none; }
+        .msg-input::placeholder { color: #72767d; }
+        .record-btn {
+            background: none;
+            border: none;
+            color: #b9bbbe;
+            font-size: 20px;
             cursor: pointer;
+            padding: 8px;
         }
-
-        .logout-btn:hover {
-            background: #c03537;
+        .record-btn:hover { color: #dcddde; }
+        .record-btn.recording {
+            color: #ed4245;
+            animation: pulse 1s infinite;
         }
-
-        /* Remote Video/Audio */
-        .remote-streams {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            max-width: 300px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-
-        .remote-video {
-            width: 100%;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            background: #000;
-        }
-
-        audio {
+        
+        /* DM List */
+        .dm-list {
             display: none;
         }
-
+        .dm-list.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .friend-item {
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .friend-item:hover {
+            background: #3c3f45;
+        }
+        .friend-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #5865f2;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+        }
+        .friend-name {
+            color: #dcddde;
+        }
+        
+        /* Voice Panel */
+        .voice-panel {
+            position: fixed;
+            bottom: 0;
+            left: 312px;
+            right: 0;
+            height: 100px;
+            background: #232428;
+            border-top: 1px solid #1e1f22;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+        .voice-panel.active { display: flex; }
+        .voice-control {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background: #3c3f45;
+            border: none;
+            color: #dcddde;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .voice-control:hover { background: #4e5158; }
+        .voice-control.active { background: #5865f2; }
+        
         /* Screen Share */
-        .screen-share-container {
+        .screen-viewer {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            max-width: 90%;
-            max-height: 90%;
-            background: #000;
-            border-radius: 10px;
-            padding: 20px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
             display: none;
+            align-items: center;
+            justify-content: center;
             z-index: 1000;
         }
-
-        .screen-share-video {
-            width: 100%;
-            height: auto;
-            border-radius: 5px;
+        .screen-viewer.active { display: flex; }
+        .screen-video {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
         }
-
-        .close-screen-btn {
+        .close-screen {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 10px 20px;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             background: #ed4245;
-            color: white;
             border: none;
-            border-radius: 5px;
+            color: #fff;
             cursor: pointer;
+            font-size: 20px;
         }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #2e3338; }
+        ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="auth-container">
-        <h1>🔊 Echo Room</h1>
-        <div id="auth-content"></div>
+    <!-- Auth -->
+    <div id="auth" class="auth-screen">
+        <div class="auth-box">
+            <h1>🔊 Echo Room</h1>
+            <div id="auth-form"></div>
+        </div>
     </div>
 
     <!-- Main App -->
-    <div id="main-app" class="main-app">
+    <div id="app" class="main-app">
         <div class="app-container">
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <div class="sidebar-header" id="server-name">Welcome Server</div>
-                <div class="channel-list" id="channels"></div>
+            <!-- Servers -->
+            <div class="servers-bar">
+                <div class="server-icon active" onclick="showServer('welcome')">🎮</div>
+                <div class="server-icon" onclick="showDM()">@</div>
+            </div>
+
+            <!-- Channels/DMs -->
+            <div class="channels-sidebar">
+                <div class="server-header" id="server-name">Welcome Server</div>
+                
+                <!-- Channels List -->
+                <div class="channels-list" id="channels-list"></div>
+                
+                <!-- DM List -->
+                <div class="dm-list" id="dm-list"></div>
+                
+                <!-- User Panel -->
                 <div class="user-panel">
-                    <span id="current-username">User</span>
+                    <div class="user-info">
+                        <div class="user-avatar" id="user-avatar">U</div>
+                        <div class="user-name" id="user-name">User</div>
+                    </div>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </div>
 
             <!-- Chat -->
-            <div class="chat-container">
+            <div class="chat-area">
                 <div class="chat-header">
-                    <span id="channel-name"># general</span>
-                    <div class="voice-controls">
-                        <button class="voice-btn" onclick="joinVoice()">Join Voice</button>
-                        <button class="voice-btn leave" onclick="leaveVoice()">Leave Voice</button>
-                        <button class="voice-btn" onclick="shareScreen()" style="background:#5865f2;">Share Screen</button>
-                    </div>
+                    <div class="channel-name" id="channel-title"># general</div>
+                    <div class="voice-btns" id="voice-controls"></div>
                 </div>
                 <div class="messages" id="messages"></div>
-                <div class="message-input-container">
-                    <input 
-                        type="text" 
-                        class="message-input" 
-                        id="message-input"
-                        placeholder="Type a message..."
-                        onkeypress="handleMessageInput(event)"
-                    >
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <input type="text" class="msg-input" id="msg-input" placeholder="Message..." onkeypress="handleEnter(event)">
+                        <button class="record-btn" id="record-btn" onclick="toggleRecord()" style="display:none;">🎤</button>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Remote Streams -->
-        <div class="remote-streams" id="remote-streams"></div>
+    <!-- Voice Panel -->
+    <div class="voice-panel" id="voice-panel">
+        <button class="voice-control" onclick="toggleMute()">🔇</button>
+        <button class="voice-control disconnect" onclick="leaveVoice()">📞</button>
+        <button class="voice-control" onclick="shareScreen()">📺</button>
+    </div>
 
-        <!-- Screen Share -->
-        <div class="screen-share-container" id="screen-share">
-            <button class="close-screen-btn" onclick="closeScreenShare()">Close</button>
-            <video class="screen-share-video" id="screen-video" autoplay></video>
-        </div>
+    <!-- Screen Viewer -->
+    <div class="screen-viewer" id="screen-viewer">
+        <button class="close-screen" onclick="closeScreen()">✕</button>
+        <video class="screen-video" id="screen-video" autoplay></video>
     </div>
 
     <script>
-        // Global variables
-        const SERVER_URL = window.location.origin;
-        let socket = null;
-        let currentUser = null;
-        let currentServer = 'welcome';
-        let currentChannel = 'general';
-        let localStream = null;
-        let screenStream = null;
-        let peerConnections = {};
-        
-        const rtcConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
+        const URL = window.location.origin;
+        let socket, user, currentServer = 'welcome', currentChannel = 'general', isDM = false;
+        let localStream, screenStream, peerConnections = {}, mediaRecorder, audioChunks = [];
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        // Initialize
+        // Init
         window.onload = async () => {
-            const token = localStorage.getItem('session_token');
+            const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    const res = await fetch(`${SERVER_URL}/api/auth/session/${token}`);
+                    const res = await fetch(`${URL}/api/auth/session/${token}`);
                     const data = await res.json();
                     if (data.success) {
-                        currentUser = data.user;
-                        showMainApp();
+                        user = data.user;
+                        showApp();
                         return;
                     }
-                } catch (e) {
-                    console.error('Session check failed:', e);
-                }
+                } catch(e) {}
             }
             showLogin();
         };
 
-        // Auth Functions
+        // Auth
         function showLogin() {
-            document.getElementById('auth-content').innerHTML = `
-                <div class="form-group">
+            document.getElementById('auth-form').innerHTML = `
+                <div class="form-field">
                     <label>Email</label>
                     <input type="email" id="email" placeholder="your@email.com">
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                     <label>Password</label>
                     <input type="password" id="password" placeholder="••••••••">
                 </div>
-                <button class="btn" onclick="login()">Login</button>
-                <button class="btn btn-secondary" onclick="showSignup()">Sign Up</button>
-                <div id="auth-message"></div>
+                <button class="auth-btn" onclick="login()">Login</button>
+                <button class="auth-btn secondary" onclick="showSignup()">Sign Up</button>
+                <div id="error"></div>
             `;
         }
 
         function showSignup() {
-            document.getElementById('auth-content').innerHTML = `
-                <div class="form-group">
+            document.getElementById('auth-form').innerHTML = `
+                <div class="form-field">
                     <label>Username</label>
-                    <input type="text" id="username" placeholder="Choose a username">
+                    <input type="text" id="username" placeholder="cooluser">
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                     <label>Email</label>
                     <input type="email" id="email" placeholder="your@email.com">
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                     <label>Password</label>
                     <input type="password" id="password" placeholder="••••••••">
                 </div>
-                <button class="btn" onclick="signup()">Create Account</button>
-                <button class="btn btn-secondary" onclick="showLogin()">Back to Login</button>
-                <div id="auth-message"></div>
+                <button class="auth-btn" onclick="signup()">Create Account</button>
+                <button class="auth-btn secondary" onclick="showLogin()">Back</button>
+                <div id="error"></div>
             `;
         }
 
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                showMessage('Please fill all fields', 'error');
-                return;
-            }
-
             try {
-                const res = await fetch(`${SERVER_URL}/api/auth/login`, {
+                const res = await fetch(`${URL}/api/auth/login`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, password})
                 });
-
                 const data = await res.json();
-                
                 if (data.success) {
-                    localStorage.setItem('session_token', data.session_token);
-                    currentUser = data.user;
-                    showMainApp();
+                    localStorage.setItem('token', data.session_token);
+                    user = data.user;
+                    showApp();
                 } else {
-                    showMessage(data.error, 'error');
+                    document.getElementById('error').innerHTML = `<div class="error">${data.error}</div>`;
                 }
-            } catch (e) {
-                showMessage('Connection error', 'error');
+            } catch(e) {
+                document.getElementById('error').innerHTML = '<div class="error">Connection error</div>';
             }
         }
 
@@ -499,139 +615,112 @@
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
-            if (!username || !email || !password) {
-                showMessage('Please fill all fields', 'error');
-                return;
-            }
-
             try {
-                const res = await fetch(`${SERVER_URL}/api/auth/signup`, {
+                const res = await fetch(`${URL}/api/auth/signup`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, email, password})
                 });
-
                 const data = await res.json();
-                
                 if (data.success) {
-                    localStorage.setItem('session_token', data.session_token);
-                    currentUser = data.user;
-                    showMainApp();
+                    localStorage.setItem('token', data.session_token);
+                    user = data.user;
+                    showApp();
                 } else {
-                    showMessage(data.error, 'error');
+                    document.getElementById('error').innerHTML = `<div class="error">${data.error}</div>`;
                 }
-            } catch (e) {
-                showMessage('Connection error', 'error');
+            } catch(e) {
+                document.getElementById('error').innerHTML = '<div class="error">Connection error</div>';
             }
         }
 
         function logout() {
-            localStorage.removeItem('session_token');
+            localStorage.removeItem('token');
             location.reload();
         }
 
-        function showMessage(msg, type) {
-            const el = document.getElementById('auth-message');
-            el.className = type;
-            el.textContent = msg;
-        }
-
-        // Main App
-        function showMainApp() {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            document.getElementById('current-username').textContent = currentUser.username;
-            
+        // App
+        function showApp() {
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('user-name').textContent = user.username;
+            document.getElementById('user-avatar').textContent = user.username[0].toUpperCase();
             initSocket();
             loadChannels();
             loadMessages();
         }
 
         function initSocket() {
-            socket = io(SERVER_URL);
-            
-            socket.on('connect', () => {
-                console.log('Connected to server');
-                joinChannel();
-            });
-
-            socket.on('new_message', (data) => {
-                addMessage(data);
-            });
-
-            socket.on('user_joined_voice', (data) => {
-                handleUserJoinedVoice(data);
-            });
-
-            socket.on('user_left_voice', (data) => {
-                handleUserLeftVoice(data);
-            });
-
+            socket = io(URL);
+            socket.on('connect', () => joinRoom());
+            socket.on('new_message', msg => addMessage(msg));
+            socket.on('user_joined_voice', data => handleUserJoinedVoice(data));
+            socket.on('user_left_voice', data => handleUserLeftVoice(data));
             socket.on('webrtc_offer', handleOffer);
             socket.on('webrtc_answer', handleAnswer);
-            socket.on('ice_candidate', handleIceCandidate);
+            socket.on('ice_candidate', handleIce);
         }
 
         async function loadChannels() {
             try {
-                const res = await fetch(`${SERVER_URL}/api/servers/${currentServer}/channels`);
+                const res = await fetch(`${URL}/api/servers/${currentServer}/channels`);
                 const channels = await res.json();
-                
-                const list = document.getElementById('channels');
+                const list = document.getElementById('channels-list');
                 list.innerHTML = '';
-                
                 channels.forEach(ch => {
                     const div = document.createElement('div');
-                    div.className = 'channel-item' + (ch.type === 'voice' ? ' voice-channel' : '');
+                    div.className = 'channel-item' + (ch.type === 'voice' ? ' voice' : '');
                     div.textContent = ch.name;
-                    div.onclick = () => switchChannel(ch.id, ch.name);
+                    div.onclick = () => switchChannel(ch.id, ch.name, ch.type);
                     if (ch.id === currentChannel) div.classList.add('active');
                     list.appendChild(div);
                 });
-            } catch (e) {
-                console.error('Failed to load channels:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
-        function switchChannel(id, name) {
+        function switchChannel(id, name, type) {
             currentChannel = id;
-            document.getElementById('channel-name').textContent = '# ' + name;
-            loadMessages();
-            joinChannel();
+            isDM = false;
+            document.getElementById('channel-title').textContent = '# ' + name;
+            document.getElementById('record-btn').style.display = 'none';
             
-            // Update active state
-            document.querySelectorAll('.channel-item').forEach(el => {
-                el.classList.remove('active');
-            });
+            if (type === 'voice') {
+                document.getElementById('voice-controls').innerHTML = `
+                    <button class="voice-btn" onclick="joinVoice()">Join Voice</button>
+                `;
+            } else {
+                document.getElementById('voice-controls').innerHTML = '';
+            }
+            
+            loadMessages();
+            joinRoom();
+            
+            document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
         }
 
-        function joinChannel() {
+        function joinRoom() {
             if (socket && socket.connected) {
                 socket.emit('join_chat', {
                     server_id: currentServer,
                     channel_id: currentChannel,
-                    username: currentUser.username
+                    username: user.username
                 });
             }
         }
 
         async function loadMessages() {
             try {
-                const res = await fetch(`${SERVER_URL}/api/messages/${currentServer}/${currentChannel}`);
+                const res = await fetch(`${URL}/api/messages/${currentServer}/${currentChannel}`);
                 const messages = await res.json();
-                
                 const container = document.getElementById('messages');
                 container.innerHTML = '';
-                
-                messages.forEach(msg => {
-                    addMessage(msg, false);
-                });
-                
+                messages.forEach(msg => addMessage(msg, false));
                 container.scrollTop = container.scrollHeight;
-            } catch (e) {
-                console.error('Failed to load messages:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
@@ -641,58 +730,67 @@
             div.className = 'message';
             
             const time = new Date(msg.timestamp).toLocaleTimeString();
+            const initial = msg.username[0].toUpperCase();
+            
+            let content = `<div class="msg-text">${escapeHtml(msg.content)}</div>`;
+            if (msg.type === 'voice') {
+                content = `
+                    <div class="voice-msg">
+                        <button class="voice-play" onclick="playVoice('${msg.content}')">▶</button>
+                        <div class="voice-wave"></div>
+                        <span class="voice-time">0:05</span>
+                    </div>
+                `;
+            }
             
             div.innerHTML = `
-                <div class="message-header">
-                    <span class="message-author">${msg.username}</span>
-                    <span class="message-time">${time}</span>
+                <div class="msg-avatar">${initial}</div>
+                <div class="msg-content">
+                    <div class="msg-header">
+                        <span class="msg-author">${msg.username}</span>
+                        <span class="msg-time">${time}</span>
+                    </div>
+                    ${content}
                 </div>
-                <div class="message-content">${escapeHtml(msg.content)}</div>
             `;
             
             container.appendChild(div);
-            
-            if (scroll) {
-                container.scrollTop = container.scrollHeight;
-            }
+            if (scroll) container.scrollTop = container.scrollHeight;
         }
 
-        function handleMessageInput(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                sendMessage();
-            }
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
         }
 
         async function sendMessage() {
-            const input = document.getElementById('message-input');
+            const input = document.getElementById('msg-input');
             const content = input.value.trim();
-            
             if (!content) return;
             
             try {
-                await fetch(`${SERVER_URL}/api/messages/send`, {
+                await fetch(`${URL}/api/messages/send`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         server_id: currentServer,
                         channel_id: currentChannel,
-                        user_email: currentUser.email,
-                        username: currentUser.username,
+                        user_email: user.email,
+                        username: user.username,
                         content: content
                     })
                 });
-
+                
                 socket.emit('send_message', {
                     server_id: currentServer,
                     channel_id: currentChannel,
-                    username: currentUser.username,
+                    username: user.username,
                     content: content,
                     timestamp: new Date().toISOString()
                 });
-
+                
                 input.value = '';
-            } catch (e) {
-                console.error('Failed to send message:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
@@ -702,229 +800,305 @@
             return div.innerHTML;
         }
 
-        // Voice Chat
+        // Voice
         async function joinVoice() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true }
                 });
-
-                document.querySelector('.voice-btn').style.display = 'none';
-                document.querySelector('.voice-btn.leave').style.display = 'block';
-
+                
+                document.getElementById('voice-panel').classList.add('active');
+                document.getElementById('voice-controls').innerHTML = '';
+                
                 socket.emit('voice_join', {
                     server_id: currentServer,
                     channel_id: currentChannel,
-                    user_email: currentUser.email,
-                    username: currentUser.username
+                    user_email: user.email,
+                    username: user.username
                 });
-
-                alert('✅ Voice connected! You can now talk with others.');
-            } catch (e) {
-                console.error('Microphone error:', e);
-                alert('❌ Could not access microphone. Please check permissions.');
+            } catch(e) {
+                alert('Microphone access denied');
             }
         }
 
         function leaveVoice() {
             if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
+                localStream.getTracks().forEach(t => t.stop());
                 localStream = null;
             }
-
-            // Close all peer connections
+            
             Object.values(peerConnections).forEach(pc => pc.close());
             peerConnections = {};
-
-            // Remove all remote audios
-            document.querySelectorAll('audio[id^="audio-"]').forEach(el => el.remove());
-
-            document.querySelector('.voice-btn').style.display = 'block';
-            document.querySelector('.voice-btn.leave').style.display = 'none';
-
+            
+            document.getElementById('voice-panel').classList.remove('active');
+            
             socket.emit('voice_leave', {
                 server_id: currentServer,
                 channel_id: currentChannel,
-                user_email: currentUser.email
+                user_email: user.email
             });
         }
 
-        // Screen Share
-        async function shareScreen() {
-            try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: true,
-                    audio: true 
-                });
-
-                const video = document.getElementById('screen-video');
-                video.srcObject = screenStream;
-                document.getElementById('screen-share').style.display = 'block';
-
-                screenStream.getVideoTracks()[0].onended = () => {
-                    closeScreenShare();
-                };
-
-                alert('✅ Screen sharing started!');
-            } catch (e) {
-                console.error('Screen share error:', e);
-                alert('❌ Could not share screen.');
+        function toggleMute() {
+            if (localStream) {
+                const audio = localStream.getAudioTracks()[0];
+                audio.enabled = !audio.enabled;
+                event.target.textContent = audio.enabled ? '🔇' : '🔊';
             }
         }
 
-        function closeScreenShare() {
+        async function shareScreen() {
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                document.getElementById('screen-video').srcObject = screenStream;
+                document.getElementById('screen-viewer').classList.add('active');
+                screenStream.getVideoTracks()[0].onended = () => closeScreen();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function closeScreen() {
             if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
+                screenStream.getTracks().forEach(t => t.stop());
                 screenStream = null;
             }
-            document.getElementById('screen-share').style.display = 'none';
+            document.getElementById('screen-viewer').classList.remove('active');
         }
 
         // WebRTC
         async function handleUserJoinedVoice(data) {
-            if (data.user_email === currentUser.email || !localStream) return;
-
-            console.log('User joined voice:', data.username);
-
+            if (data.user_email === user.email || !localStream) return;
+            
             try {
                 const pc = new RTCPeerConnection(rtcConfig);
                 peerConnections[data.user_email] = pc;
-
-                // Add local tracks
-                localStream.getTracks().forEach(track => {
-                    pc.addTrack(track, localStream);
-                });
-
-                // Handle remote track
-                pc.ontrack = (event) => {
-                    console.log('Received track from:', data.user_email);
-                    playRemoteAudio(data.user_email, event.streams[0]);
+                
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+                
+                pc.ontrack = e => {
+                    const audio = document.createElement('audio');
+                    audio.srcObject = e.streams[0];
+                    audio.autoplay = true;
+                    audio.id = 'audio-' + data.user_email;
+                    document.body.appendChild(audio);
                 };
-
-                // Handle ICE candidates
-                pc.onicecandidate = (event) => {
-                    if (event.candidate) {
+                
+                pc.onicecandidate = e => {
+                    if (e.candidate) {
                         socket.emit('ice_candidate', {
                             target: data.user_email,
-                            candidate: event.candidate,
-                            from_user: currentUser.email
+                            candidate: e.candidate,
+                            from_user: user.email
                         });
                     }
                 };
-
-                // Create offer
+                
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-
+                
                 socket.emit('webrtc_offer', {
                     target: data.user_email,
                     offer: offer,
-                    from_user: currentUser.email
+                    from_user: user.email
                 });
-
-            } catch (e) {
-                console.error('Error creating peer connection:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
         async function handleOffer(data) {
-            console.log('Received offer from:', data.from_user);
-
             try {
                 const pc = new RTCPeerConnection(rtcConfig);
                 peerConnections[data.from_user] = pc;
-
+                
                 if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        pc.addTrack(track, localStream);
-                    });
+                    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
                 }
-
-                pc.ontrack = (event) => {
-                    console.log('Received track from:', data.from_user);
-                    playRemoteAudio(data.from_user, event.streams[0]);
+                
+                pc.ontrack = e => {
+                    const audio = document.createElement('audio');
+                    audio.srcObject = e.streams[0];
+                    audio.autoplay = true;
+                    audio.id = 'audio-' + data.from_user;
+                    document.body.appendChild(audio);
                 };
-
-                pc.onicecandidate = (event) => {
-                    if (event.candidate) {
+                
+                pc.onicecandidate = e => {
+                    if (e.candidate) {
                         socket.emit('ice_candidate', {
                             target: data.from_user,
-                            candidate: event.candidate,
-                            from_user: currentUser.email
+                            candidate: e.candidate,
+                            from_user: user.email
                         });
                     }
                 };
-
+                
                 await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
-
+                
                 socket.emit('webrtc_answer', {
                     target: data.from_user,
                     answer: answer,
-                    from_user: currentUser.email
+                    from_user: user.email
                 });
-
-            } catch (e) {
-                console.error('Error handling offer:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
         async function handleAnswer(data) {
-            console.log('Received answer from:', data.from_user);
-
             try {
                 const pc = peerConnections[data.from_user];
                 if (pc) {
                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                 }
-            } catch (e) {
-                console.error('Error handling answer:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
-        async function handleIceCandidate(data) {
+        async function handleIce(data) {
             try {
                 const pc = peerConnections[data.from_user];
                 if (pc) {
                     await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                 }
-            } catch (e) {
-                console.error('Error handling ICE candidate:', e);
+            } catch(e) {
+                console.error(e);
             }
         }
 
         function handleUserLeftVoice(data) {
-            console.log('User left voice:', data.user_email);
-
             if (peerConnections[data.user_email]) {
                 peerConnections[data.user_email].close();
                 delete peerConnections[data.user_email];
             }
+            const audio = document.getElementById('audio-' + data.user_email);
+            if (audio) audio.remove();
+        }
 
-            const audio = document.getElementById(`audio-${data.user_email}`);
-            if (audio) {
-                audio.remove();
+        // Voice Messages
+        function toggleRecord() {
+            const btn = document.getElementById('record-btn');
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                btn.classList.remove('recording');
+            } else {
+                startRecording();
+                btn.classList.add('recording');
             }
         }
 
-        function playRemoteAudio(userId, stream) {
-            let audio = document.getElementById(`audio-${userId}`);
-            if (audio) {
-                audio.remove();
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = e => {
+                    audioChunks.push(e.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                        const base64 = reader.result.split(',')[1];
+                        await sendVoiceMessage(base64);
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                
+                mediaRecorder.start();
+            } catch(e) {
+                alert('Microphone access denied');
             }
+        }
 
-            audio = document.createElement('audio');
-            audio.id = `audio-${userId}`;
-            audio.srcObject = stream;
-            audio.autoplay = true;
-            document.body.appendChild(audio);
+        async function sendVoiceMessage(base64) {
+            try {
+                await fetch(`${URL}/api/messages/send`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        server_id: currentServer,
+                        channel_id: currentChannel,
+                        user_email: user.email,
+                        username: user.username,
+                        content: base64,
+                        type: 'voice'
+                    })
+                });
+                
+                socket.emit('send_message', {
+                    server_id: currentServer,
+                    channel_id: currentChannel,
+                    username: user.username,
+                    content: base64,
+                    type: 'voice',
+                    timestamp: new Date().toISOString()
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
 
-            console.log('Playing audio from:', userId);
+        function playVoice(base64) {
+            const audio = new Audio('data:audio/webm;base64,' + base64);
+            audio.play();
+        }
+
+        // DM
+        function showDM() {
+            currentServer = 'dm';
+            isDM = true;
+            document.getElementById('server-name').textContent = 'Direct Messages';
+            document.getElementById('channels-list').style.display = 'none';
+            document.getElementById('dm-list').classList.add('active');
+            document.getElementById('record-btn').style.display = 'block';
+            loadFriends();
+        }
+
+        function showServer(id) {
+            currentServer = id;
+            isDM = false;
+            document.getElementById('server-name').textContent = 'Welcome Server';
+            document.getElementById('channels-list').style.display = 'block';
+            document.getElementById('dm-list').classList.remove('active');
+            document.getElementById('record-btn').style.display = 'none';
+            loadChannels();
+        }
+
+        async function loadFriends() {
+            try {
+                const res = await fetch(`${URL}/api/friends/${user.email}`);
+                const data = await res.json();
+                const list = document.getElementById('dm-list');
+                list.innerHTML = '';
+                
+                data.friends.forEach(friend => {
+                    const div = document.createElement('div');
+                    div.className = 'friend-item';
+                    div.onclick = () => openDM(friend);
+                    div.innerHTML = `
+                        <div class="friend-avatar">${friend.username[0].toUpperCase()}</div>
+                        <div class="friend-name">${friend.username}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function openDM(friend) {
+            currentChannel = 'dm_' + friend.email;
+            document.getElementById('channel-title').textContent = '@ ' + friend.username;
+            loadMessages();
+            joinRoom();
         }
     </script>
 </body>
